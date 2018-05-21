@@ -1,0 +1,11 @@
+﻿  Renderer.cpp
+c:\users\joakim\documents\visual studio 2015\projects\softrender\renderer\renderer.cpp(74): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  Generating Code...
+  Compiling...
+  Context.cpp
+  Bitmap.cpp
+c:\users\joakim\documents\visual studio 2015\projects\softrender\renderer\bitmap.cpp(150): warning C4018: '<': signed/unsigned mismatch
+c:\users\joakim\documents\visual studio 2015\projects\softrender\renderer\bitmap.cpp(585): warning C4018: '<': signed/unsigned mismatch
+  Generating Code...
+  Renderer.vcxproj -> C:\Users\Joakim\documents\visual studio 2015\Projects\SoftRender\Debug\Renderer.dll
+  Renderer.vcxproj -> C:\Users\Joakim\documents\visual studio 2015\Projects\SoftRender\Debug\Renderer.pdb (Partial PDB)

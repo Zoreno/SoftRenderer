@@ -1,0 +1,1151 @@
+#include "Renderer.h"
+
+#include <Windows.h>
+#include <chrono>
+#include <ctime>
+
+// TODO: Move to separate files/classes
+// TODO: Implement vector and matrix functions as needed.
+
+//=============================================================================
+// Basic Math
+//=============================================================================
+
+float Lerp(float a, float b, float t)
+{
+	return a + t * (b - a);
+}
+
+//=============================================================================
+// Vectors
+//=============================================================================
+
+// TODO: Implement as class
+// TODO: Vector2f, Vector3f
+
+typedef struct _vector4f
+{
+	float x;
+	float y;
+	float z;
+	float w;
+} ra_vector4f_t;
+
+float Length(const ra_vector4f_t& v)
+{
+	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+}
+
+float Dot(const ra_vector4f_t& v1, const ra_vector4f_t& v2)
+{
+	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
+}
+
+ra_vector4f_t Cross(const ra_vector4f_t& v1, const ra_vector4f_t& v2)
+{
+	ra_vector4f_t ret;
+
+	ret.x = v1.y * v2.z - v1.z * v2.y;
+	ret.y = v1.z * v2.x - v1.x * v2.z;
+	ret.z = v1.x * v2.z - v1.y * v2.x;
+	ret.w = 0;
+
+	return ret;
+}
+
+ra_vector4f_t Normalized(const ra_vector4f_t& v1)
+{
+	ra_vector4f_t ret = v1;
+
+	float length = Length(v1);
+
+	ret.x /= length;
+	ret.y /= length;
+	ret.z /= length;
+	ret.w /= length;
+
+	return ret;
+}
+
+ra_vector4f_t Multiply(const ra_vector4f_t& v, float f)
+{
+	ra_vector4f_t ret = v;
+
+	ret.x *= f;
+	ret.y *= f;
+	ret.z *= f;
+	ret.w *= f;
+
+	return ret;
+}
+
+ra_vector4f_t Add(const ra_vector4f_t& v1, const ra_vector4f_t& v2)
+{
+	ra_vector4f_t ret;
+
+	ret.x = v1.x + v2.x;
+	ret.y = v1.y + v2.y;
+	ret.z = v1.z + v2.z;
+	ret.w = v1.w + v2.w;
+
+	return ret;
+}
+
+ra_vector4f_t Add(const ra_vector4f_t& v1, float f)
+{
+	ra_vector4f_t ret;
+
+	ret.x = v1.x + f;
+	ret.y = v1.y + f;
+	ret.z = v1.z + f;
+	ret.w = v1.w + f;
+
+	return ret;
+}
+
+//=============================================================================
+// Matrices
+//=============================================================================
+
+// TODO: Implement as class
+// TODO: Matrix2f, Matrix3f
+
+typedef struct _matrix4f
+{
+	float m[4][4];
+} ra_matrix4f_t;
+
+ra_matrix4f_t Multiply(const ra_matrix4f_t& m1, const ra_matrix4f_t& m2)
+{
+	ra_matrix4f_t ret;
+
+	for (int i = 0; i < 4; ++i)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			ret.m[i][j] =
+				m1.m[i][0] * m2.m[0][j] +
+				m1.m[i][1] * m2.m[1][j] +
+				m1.m[i][2] * m2.m[2][j] +
+				m1.m[i][3] * m2.m[3][j];
+		}
+	}
+
+	return ret;
+}
+
+ra_matrix4f_t InitIdentity()
+{
+	ra_matrix4f_t ret;
+
+	ret.m[0][0] = 1;
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = 0;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = 1;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = 0;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = 1;
+	ret.m[2][3] = 0;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitScreenSpaceTransform(float halfWidth, float halfHeight)
+{
+	ra_matrix4f_t ret;
+
+	ret.m[0][0] = halfWidth;
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = halfWidth;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = -halfHeight;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = halfHeight;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = 1;
+	ret.m[2][3] = 0;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitTranslation(float x, float y, float z)
+{
+	ra_matrix4f_t ret;
+
+	ret.m[0][0] = 1;
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = x;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = 1;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = y;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = 1;
+	ret.m[2][3] = z;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitRotation(float x, float y, float z)
+{
+	ra_matrix4f_t rx;
+	ra_matrix4f_t ry;
+	ra_matrix4f_t rz;
+
+	x = (float)x * 3.14159f / 180.f;
+	y = (float)y * 3.14159f / 180.f;
+	z = (float)z * 3.14159f / 180.f;
+
+	// Z axis rotation
+
+	rz.m[0][0] = (float)std::cos(z);
+	rz.m[0][1] = -(float)std::sin(z);
+	rz.m[0][2] = 0;
+	rz.m[0][3] = 0;
+
+	rz.m[1][0] = (float)std::sin(z);
+	rz.m[1][1] = (float)std::cos(z);
+	rz.m[1][2] = 0;
+	rz.m[1][3] = 0;
+
+	rz.m[2][0] = 0;
+	rz.m[2][1] = 0;
+	rz.m[2][2] = 1;
+	rz.m[2][3] = 0;
+
+	rz.m[3][0] = 0;
+	rz.m[3][1] = 0;
+	rz.m[3][2] = 0;
+	rz.m[3][3] = 1;
+
+	// X axis rotation
+
+	rx.m[0][0] = 1;
+	rx.m[0][1] = 0;
+	rx.m[0][2] = 0;
+	rx.m[0][3] = 0;
+
+	rx.m[1][0] = 0;
+	rx.m[1][1] = (float)std::cos(x);
+	rx.m[1][2] = -(float)std::sin(x);
+	rx.m[1][3] = 0;
+
+	rx.m[2][0] = 0;
+	rx.m[2][1] = (float)std::sin(x);
+	rx.m[2][2] = (float)std::cos(x);
+	rx.m[2][3] = 0;
+
+	rx.m[3][0] = 0;
+	rx.m[3][1] = 0;
+	rx.m[3][2] = 0;
+	rx.m[3][3] = 1;
+
+	// Y axis rotation
+
+	ry.m[0][0] = (float)std::cos(y);
+	ry.m[0][1] = 0;
+	ry.m[0][2] = -(float)std::sin(y);
+	ry.m[0][3] = 0;
+
+	ry.m[1][0] = 0;
+	ry.m[1][1] = 1;
+	ry.m[1][2] = 0;
+	ry.m[1][3] = 0;
+
+	ry.m[2][0] = (float)std::sin(y);
+	ry.m[2][1] = 0;
+	ry.m[2][2] = (float)std::cos(y);
+	ry.m[2][3] = 0;
+
+	ry.m[3][0] = 0;
+	ry.m[3][1] = 0;
+	ry.m[3][2] = 0;
+	ry.m[3][3] = 1;
+
+	ry = Multiply(ry, rx);
+
+	return Multiply(rz, ry);
+}
+
+ra_matrix4f_t InitScale(float x, float y, float z)
+{
+	ra_matrix4f_t ret;
+
+	ret.m[0][0] = x;
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = 0;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = y;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = 0;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = z;
+	ret.m[2][3] = 0;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitPerspective(float fov, float aspectRatio, float zNear, float zFar)
+{
+	ra_matrix4f_t ret;
+
+	fov = (float)fov * 3.14159f / 180.f;
+
+	float tanHalfFOV = (float)std::tan(fov / 2);
+	float zRange = zNear - zFar;
+
+	ret.m[0][0] = 1.0f / (tanHalfFOV * aspectRatio);
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = 0;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = 1.0f / tanHalfFOV;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = 0;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = (-zNear - zFar) / zRange;
+	ret.m[2][3] = 2 * zFar * zNear / zRange;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 1;
+	ret.m[3][3] = 0;
+
+	return ret;
+
+}
+
+ra_matrix4f_t InitOrthographic(float left, float  right, float bottom, float top, float nearPlane, float farPlane)
+{
+	ra_matrix4f_t ret;
+
+	float width = right - left;
+	float height = top - bottom;
+	float depth = farPlane - nearPlane;
+
+	ret.m[0][0] = 2 / width;
+	ret.m[0][1] = 0;
+	ret.m[0][2] = 0;
+	ret.m[0][3] = -(right + left) / width;
+
+	ret.m[1][0] = 0;
+	ret.m[1][1] = 2 / height;
+	ret.m[1][2] = 0;
+	ret.m[1][3] = -(top + bottom) / height;
+
+	ret.m[2][0] = 0;
+	ret.m[2][1] = 0;
+	ret.m[2][2] = -2 / depth;
+	ret.m[2][3] = -(farPlane + nearPlane) / depth;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitRotation(const ra_vector4f_t& forward, const ra_vector4f_t& up, const ra_vector4f_t& right)
+{
+
+	ra_matrix4f_t ret;
+
+	ra_vector4f_t f = forward;
+	ra_vector4f_t r = right;
+	ra_vector4f_t u = up;
+
+	ret.m[0][0] = r.x;
+	ret.m[0][1] = r.y;
+	ret.m[0][2] = r.z;
+	ret.m[0][3] = 0;
+
+	ret.m[1][0] = u.x;
+	ret.m[1][1] = u.y;
+	ret.m[1][2] = u.z;
+	ret.m[1][3] = 0;
+
+	ret.m[2][0] = f.x;
+	ret.m[2][1] = f.y;
+	ret.m[2][2] = f.z;
+	ret.m[2][3] = 0;
+
+	ret.m[3][0] = 0;
+	ret.m[3][1] = 0;
+	ret.m[3][2] = 0;
+	ret.m[3][3] = 1;
+
+	return ret;
+}
+
+ra_matrix4f_t InitRotation(const ra_vector4f_t& forward, const ra_vector4f_t& up)
+{
+	ra_vector4f_t f = Normalized(forward);
+
+	ra_vector4f_t r = Normalized(up);
+
+	r = Cross(r, f);
+
+	ra_vector4f_t u;
+
+	u = Cross(f, r);
+
+	return InitRotation(f, u, r);
+}
+
+ra_vector4f_t Transform(const ra_vector4f_t& vector, const ra_matrix4f_t& matrix)
+{
+	ra_vector4f_t ret;
+
+	ret.x = matrix.m[0][0] * vector.x + matrix.m[0][1] * vector.y + matrix.m[0][2] * vector.z + matrix.m[0][3] * vector.w;
+	ret.y = matrix.m[1][0] * vector.x + matrix.m[1][1] * vector.y + matrix.m[1][2] * vector.z + matrix.m[1][3] * vector.w;
+	ret.z = matrix.m[2][0] * vector.x + matrix.m[2][1] * vector.y + matrix.m[2][2] * vector.z + matrix.m[2][3] * vector.w;
+	ret.w = matrix.m[3][0] * vector.x + matrix.m[3][1] * vector.y + matrix.m[3][2] * vector.z + matrix.m[3][3] * vector.w;
+
+	return ret;
+}
+
+//=============================================================================
+// Vertex
+//=============================================================================
+
+typedef struct _vertex
+{
+	ra_vector4f_t position;
+	ra_vector4f_t color;
+} ra_vertex_t;
+
+float TriangleVertexArea(ra_vertex_t a, ra_vertex_t b, ra_vertex_t c)
+{
+	float x1 = b.position.x - a.position.x;
+	float y1 = b.position.y - a.position.x;
+	float x2 = c.position.x - a.position.x;
+	float y2 = c.position.y - a.position.y;
+
+	return (x1 * y2 - x2 * y1) / 2.f;
+}
+
+ra_vertex_t Transform(const ra_vertex_t& v, const ra_matrix4f_t& ma)
+{
+	ra_vertex_t ret;
+
+	ret.position = Transform(v.position, ma);
+
+	return ret;
+}
+
+ra_vertex_t PerspectiveDivide(const ra_vertex_t& v)
+{
+	ra_vertex_t ret = v;
+
+	ret.position.x /= ret.position.w;
+	ret.position.y /= ret.position.w;
+	ret.position.z /= ret.position.w;
+
+	return ret;
+}
+
+
+//=============================================================================
+// Color
+//=============================================================================
+
+#pragma pack(push, 1)
+typedef struct _ra_color
+{
+	ra_uint8_t red;
+	ra_uint8_t green;
+	ra_uint8_t blue;
+	ra_uint8_t alpha;
+
+} ra_color_t;
+#pragma pack(pop)
+
+ra_color_t CreateColor(ra_uint8_t red, ra_uint8_t green, ra_uint8_t blue, ra_uint8_t alpha = 0xFF)
+{
+	ra_color_t color;
+
+	color.red = red;
+	color.green = green;
+	color.blue = blue;
+	color.alpha = alpha;
+
+	return color;
+}
+
+ra_color_t CreateColor(ra_uint8_t greyScale, ra_uint8_t alpha)
+{
+	ra_color_t color;
+
+	color.red = greyScale;
+	color.green = greyScale;
+	color.blue = greyScale;
+	color.alpha = alpha;
+
+	return color;
+}
+
+//=============================================================================
+// Edge
+//=============================================================================
+
+typedef struct _ra_edge
+{
+	float x;
+	float xStep;
+	int yStart;
+	int yEnd;
+} ra_edge_t;
+
+ra_edge_t CreateEdge(ra_vertex_t minYvert, ra_vertex_t maxYvert)
+{
+	ra_edge_t edge;
+
+	edge.yStart = static_cast<int>(std::ceil(minYvert.position.y));
+	edge.yEnd = static_cast<int>(std::ceil(maxYvert.position.y));
+
+	float yDist = maxYvert.position.y - minYvert.position.y;
+	float xDist = maxYvert.position.x - minYvert.position.x;
+
+	float yPrestep = edge.yStart - minYvert.position.y;
+
+	edge.xStep = xDist / yDist;
+
+	edge.x = minYvert.position.x + yPrestep * edge.xStep;
+
+	return edge;
+}
+
+void EdgeStep(ra_edge_t *edge)
+{
+	edge->x += edge->xStep;
+}
+
+//=============================================================================
+// Gradient
+//=============================================================================
+
+typedef struct _ra_gradients
+{
+	ra_vector4f_t color[3];
+	ra_vector4f_t colorXStep;
+	ra_vector4f_t colorYStep;
+} ra_gradients_t;
+
+ra_gradients_t CreateGradients(ra_vertex_t minYvert, ra_vertex_t midYvert, ra_vertex_t maxYvert)
+{
+	ra_gradients_t grad;
+
+	float oneOverdX = 1.0f /
+		((midYvert.position.x - maxYvert.position.x) * (minYvert.position.y - maxYvert.position.y) -
+		(minYvert.position.x - maxYvert.position.x) * (midYvert.position.y - maxYvert.position.y));
+}
+
+//=============================================================================
+// Bitmap
+//=============================================================================
+
+typedef struct _ra_bitmap
+{
+	ra_int32_t width;
+	ra_int32_t height;
+	ra_int32_t bpp;
+
+	unsigned char *pixels;
+
+	ra_int32_t *scanBuffer;
+} ra_bitmap_t;
+
+ra_bitmap_t *CreateBitmap(ra_int32_t width, ra_int32_t height, ra_int32_t bpp)
+{
+	ra_bitmap_t *bitmap = (ra_bitmap_t *)malloc(sizeof(ra_bitmap_t));
+
+	if (!bitmap)
+	{
+		return nullptr;
+	}
+
+	bitmap->width = width;
+	bitmap->height = height;
+	bitmap->bpp = bpp;
+
+	bitmap->pixels = (unsigned char *)malloc(width * height * bpp * sizeof(unsigned char));
+
+	if (!bitmap->pixels)
+	{
+		free(bitmap);
+
+		return nullptr;
+	}
+
+	bitmap->scanBuffer = (ra_int32_t *)malloc(height * 2 * sizeof(ra_int32_t));
+
+	if (!bitmap->scanBuffer)
+	{
+		free(bitmap->pixels);
+		free(bitmap);
+
+		return nullptr;
+	}
+
+
+	return bitmap;
+}
+
+void DestroyBitmap(ra_bitmap_t *bitmap)
+{
+	if (bitmap)
+	{
+		if (bitmap->pixels)
+		{
+			free(bitmap->pixels);
+		}
+
+		if (bitmap->scanBuffer)
+		{
+			free(bitmap->scanBuffer);
+		}
+
+		free(bitmap);
+	}
+}
+
+void ClearBitmap(ra_bitmap_t *bitmap, ra_color_t color)
+{
+	// WARNING: This assumes that the format of the bitmap is the same as the color struct.
+
+	const ra_int32_t size = bitmap->width * bitmap->height * bitmap->bpp;
+
+	// This can be optimized with SIMD
+	for (ra_int32_t i = 0; i < size; i += bitmap->bpp)
+	{
+		bitmap->pixels[i] = color.red;
+		bitmap->pixels[i + 1] = color.green;
+		bitmap->pixels[i + 2] = color.blue;
+		bitmap->pixels[i + 3] = color.alpha;
+	}
+
+	for (ra_int32_t i = 0; i < 2 * bitmap->height; ++i)
+	{
+		bitmap->scanBuffer[i] = 0;
+	}
+}
+
+void DrawPixel(
+	ra_bitmap_t *bitmap,
+	ra_int32_t x,
+	ra_int32_t y,
+	ra_uint8_t red,
+	ra_uint8_t green,
+	ra_uint8_t blue,
+	ra_uint8_t alpha)
+{
+	if (x >= bitmap->width)
+	{
+		return;
+	}
+
+	if (y >= bitmap->height)
+	{
+		return;
+	}
+
+	ra_int32_t offset = (bitmap->width * y + x) * bitmap->bpp;
+
+	// TODO: Swizzling with different bitmap formats
+	bitmap->pixels[offset + 0] = red;
+	bitmap->pixels[offset + 1] = green;
+	bitmap->pixels[offset + 2] = blue;
+	bitmap->pixels[offset + 3] = alpha;
+}
+
+void DrawScanBuffer(ra_bitmap_t *bitmap, ra_int32_t yCoord, ra_int32_t xMin, ra_int32_t xMax)
+{
+	if (yCoord < 0)
+	{
+		return;
+	}
+
+	if (yCoord >= bitmap->height)
+	{
+		return;
+	}
+
+	bitmap->scanBuffer[yCoord * 2 + 0] = xMin;
+	bitmap->scanBuffer[yCoord * 2 + 1] = xMax;
+}
+
+void FillShape(ra_bitmap_t *bitmap, ra_int32_t yMin, ra_int32_t yMax)
+{
+	// TODO: This might be optimized with SIMD
+
+	if (yMin < 0)
+	{
+		yMin = 0;
+	}
+
+	if (yMax >= bitmap->height)
+	{
+		yMax = bitmap->height - 1;
+	}
+
+	for (ra_int32_t j = yMin; j < yMax; ++j)
+	{
+		ra_int32_t xMin = bitmap->scanBuffer[j * 2 + 0];
+		ra_int32_t xMax = bitmap->scanBuffer[j * 2 + 1];
+
+		if (xMin < 0)
+		{
+			xMin = 0;
+		}
+
+		if (xMax >= bitmap->width)
+		{
+			xMax = bitmap->width - 1;
+		}
+
+		for (ra_int32_t i = xMin; i < xMax; ++i)
+		{
+			DrawPixel(bitmap, i, j, 0xFF, 0xFF, 0xFF, 0xFF);
+		}
+	}
+}
+
+void ScanConvertLine(ra_bitmap_t *bitmap, ra_vertex_t minYvert, ra_vertex_t maxYvert, int side)
+{
+	int yStart = static_cast<int>(std::ceil(minYvert.position.y));
+	int yEnd = static_cast<int>(std::ceil(maxYvert.position.y));
+	int xStart = static_cast<int>(std::ceil(minYvert.position.x));
+	int xEnd = static_cast<int>(std::ceil(maxYvert.position.x));
+
+	float yDist = maxYvert.position.y - minYvert.position.y;
+	float xDist = maxYvert.position.x - minYvert.position.x;
+
+	if (yDist <= 0)
+	{
+		return;
+	}
+
+	float xStep = xDist / yDist;
+	float yPrestep = yStart - minYvert.position.y;
+	float curX = minYvert.position.x + yPrestep * xStep;
+
+	for (int j = yStart; j < yEnd; ++j)
+	{
+		bitmap->scanBuffer[j * 2 + side] = static_cast<ra_int32_t>(std::ceil(curX));
+
+		curX += xStep;
+	}
+}
+
+void DrawScanLine(ra_bitmap_t *bitmap, ra_edge_t left, ra_edge_t right, int j)
+{
+	int xMin = static_cast<float>(std::ceil(left.x));
+	int xMax = static_cast<float>(std::ceil(right.x));
+
+	for (int i = xMin; i < xMax; ++i)
+	{
+		DrawPixel(bitmap, i, j, 0xFF, 0xFF, 0xFF, 0xFF);
+	}
+}
+
+void ScanEdge(ra_bitmap_t *bitmap, ra_edge_t *a, ra_edge_t *b, bool handedness)
+{
+	ra_edge_t *left = a;
+	ra_edge_t *right = b;
+
+	if (handedness)
+	{
+		ra_edge_t *temp = left;
+		left = right;
+		right = temp;
+	}
+
+	int yStart = b->yStart;
+	int yEnd = b->yEnd;
+
+	for (int j = yStart; j < yEnd; ++j)
+	{
+		DrawScanLine(bitmap, *left, *right, j);
+
+		EdgeStep(left);
+		EdgeStep(right);
+	}
+}
+
+void ScanTriangle(ra_bitmap_t *bitmap, ra_vertex_t minYvert, ra_vertex_t midYvert, ra_vertex_t maxYvert, bool handedness)
+{
+	ra_edge_t topToBottom = CreateEdge(minYvert, maxYvert);
+	ra_edge_t topToMiddle = CreateEdge(minYvert, midYvert);
+	ra_edge_t middleToBottom = CreateEdge(midYvert, maxYvert);
+
+	ScanEdge(bitmap, &topToBottom, &topToMiddle, handedness);
+	ScanEdge(bitmap, &topToBottom, &middleToBottom, handedness);
+
+}
+
+void ScanConvertTriangle(ra_bitmap_t *bitmap, ra_vertex_t minYvert, ra_vertex_t midYvert, ra_vertex_t maxYvert, int handedness)
+{
+	ScanConvertLine(bitmap, minYvert, maxYvert, 0 + handedness);
+	ScanConvertLine(bitmap, minYvert, midYvert, 1 - handedness);
+	ScanConvertLine(bitmap, midYvert, maxYvert, 1 - handedness);
+}
+
+void FillTriangle(ra_bitmap_t *bitmap, ra_vertex_t v1, ra_vertex_t v2, ra_vertex_t v3)
+{
+	ra_matrix4f_t screenSpaceTransform = InitScreenSpaceTransform(
+		static_cast<float>(bitmap->width) / 2.f,
+		static_cast<float>(bitmap->height) / 2.f);
+
+	ra_vertex_t minYvert = Transform(v1, screenSpaceTransform);
+	ra_vertex_t midYvert = Transform(v2, screenSpaceTransform);
+	ra_vertex_t maxYvert = Transform(v3, screenSpaceTransform);
+
+	minYvert = PerspectiveDivide(minYvert);
+	midYvert = PerspectiveDivide(midYvert);
+	maxYvert = PerspectiveDivide(maxYvert);
+
+	if (maxYvert.position.y < midYvert.position.y)
+	{
+		std::swap(maxYvert, midYvert);
+	}
+
+	if (midYvert.position.y < minYvert.position.y)
+	{
+		std::swap(midYvert, minYvert);
+	}
+
+	if (maxYvert.position.y < midYvert.position.y)
+	{
+		std::swap(maxYvert, midYvert);
+	}
+
+	float area = TriangleVertexArea(minYvert, maxYvert, midYvert);
+
+	bool handedness = area >= 0;
+
+	ScanTriangle(bitmap, minYvert, midYvert, maxYvert, handedness);
+}
+
+//=============================================================================
+// Rendering context struct
+//=============================================================================
+
+typedef struct _ra_rendering_context
+{
+	ra_uint32_t majorVersion;
+	ra_uint32_t minorVersion;
+
+	ra_uint32_t windowWidth;
+	ra_uint32_t windowHeight;
+
+	ra_bitmap_t *framebuffer;
+
+	// TODO: Move these windows specific state variables to a separate backend implementation struct.
+	HINSTANCE instance;
+	HWND windowHandle;
+	HDC deviceContext;
+} ra_rendering_context_t;
+
+static ra_rendering_context_t _context;
+
+//=============================================================================
+// Windows window management
+//=============================================================================
+
+// TODO: Move this to a backend file.
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_CLOSE:
+		DestroyWindow(hwnd);
+		break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hwnd, msg, wParam, lParam);
+	}
+	return 0;
+}
+
+// TODO: Move this to a backend file.
+void CreateRenderingWindow(ra_rendering_context_t *context, ra_uint32_t windowWidth, ra_uint32_t windowHeight, const char *title)
+{
+	HINSTANCE currentInstance = GetModuleHandle(NULL);
+	WNDCLASSEX windowClass;
+	HWND windowHandle;
+	HDC deviceContext;
+	const char szClassName[] = "myWindowClass";
+
+	windowClass.cbSize = sizeof(WNDCLASSEX);
+	windowClass.style = 0;
+	windowClass.lpfnWndProc = WndProc;
+	windowClass.cbClsExtra = 0;
+	windowClass.cbWndExtra = 0;
+	windowClass.hInstance = currentInstance;
+	windowClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	windowClass.hCursor = LoadIcon(NULL, IDC_ARROW);
+	windowClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	windowClass.lpszMenuName = NULL;
+	windowClass.lpszClassName = szClassName;
+	windowClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+
+	if (!RegisterClassEx(&windowClass))
+	{
+		MessageBox(NULL, "Window registration failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+		exit(1);
+	}
+
+	windowHandle = CreateWindowEx(
+		WS_EX_CLIENTEDGE,
+		szClassName,
+		title,
+		WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		windowWidth,
+		windowHeight,
+		NULL,
+		NULL,
+		currentInstance,
+		NULL);
+
+	if (!windowHandle)
+	{
+		MessageBox(NULL, "Error creating window!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+		exit(1);
+	}
+
+	ShowWindow(windowHandle, SW_SHOW);
+
+	deviceContext = GetDC(windowHandle);
+
+	if (!deviceContext)
+	{
+		MessageBox(NULL, "Error creating device context", "Error!", MB_ICONEXCLAMATION | MB_OK);
+		exit(1);
+	}
+
+	context->instance = currentInstance;
+	context->windowHandle = windowHandle;
+	context->deviceContext = deviceContext;
+	context->windowWidth = windowWidth;
+	context->windowHeight = windowHeight;
+
+	SetWindowLong(windowHandle, GWL_USERDATA, (long)&context);
+}
+
+// TODO: Move this to a backend file.
+int HandleMessage()
+{
+	MSG message;
+
+	while (PeekMessage(&message, NULL, 0, 0, PM_NOREMOVE))
+	{
+		if (!GetMessage(&message, NULL, 0, 0))
+		{
+			return 1; // TODO: Properly handle message return codes
+		}
+
+		TranslateMessage(&message);
+		DispatchMessage(&message);
+	}
+
+	return 0;
+}
+
+// TODO: Move this to a backend file.
+void CleanupRenderingContext(ra_rendering_context_t *context)
+{
+	if (context->windowHandle)
+	{
+
+		if (context->deviceContext)
+		{
+			ReleaseDC(context->windowHandle, context->deviceContext);
+		}
+
+		DestroyWindow(context->windowHandle);
+	}
+}
+
+// TODO: Move this to a backend file.
+void FlushWindowContext(ra_rendering_context_t *context)
+{
+	if (!context->deviceContext)
+	{
+		return;
+	}
+
+	static BITMAPINFO bmi;
+	memset(&bmi, 0, sizeof(bmi));
+
+	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi.bmiHeader.biWidth = context->windowWidth;
+	bmi.bmiHeader.biHeight = -(static_cast<LONG>(context->windowHeight));
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	bmi.bmiHeader.biSizeImage = 0;
+
+	SetDIBitsToDevice(
+		context->deviceContext,
+		0,
+		0,
+		context->windowWidth,
+		context->windowHeight,
+		0,
+		0,
+		0,
+		context->windowHeight,
+		context->framebuffer->pixels,
+		&bmi,
+		DIB_RGB_COLORS);
+}
+
+//=============================================================================
+// Time Framework
+//=============================================================================
+
+unsigned long long GetTime()
+{
+	auto currentTime = std::chrono::system_clock::now();
+
+	return std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count();
+}
+
+unsigned long long GetTimeNano()
+{
+	auto currentTime = std::chrono::system_clock::now();
+
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(currentTime.time_since_epoch()).count();
+}
+
+//=============================================================================
+// DLL API
+//=============================================================================
+
+extern "C" {
+
+	void Initialize()
+	{
+		_context.majorVersion = 0;
+		_context.minorVersion = 1;
+
+		CreateRenderingWindow(&_context, 800, 600, "Title");
+
+		_context.framebuffer = CreateBitmap(800, 600, 4);
+
+		ra_color_t clearColor = CreateColor(0, 0, 0);
+
+		ra_vertex_t top = { {-1, -1, 0, 1 }, {1.0f, 0.0f, 0.0f, 1.0f} };
+		ra_vertex_t mid = { {0, 1, 0, 1}, { 0.0f, 1.0f, 0.0f, 1.0f } };
+		ra_vertex_t bot = { {1, -1, 0, 1},{ 0.0f, 0.0f, 1.0f, 1.0f } };
+
+		ra_matrix4f_t proj = InitPerspective(90.f, 800.f / 600.f, 0.1f, 1000.f);
+
+		unsigned long long startTime = GetTime();
+
+		while (true)
+		{
+			int retVal;
+
+			retVal = HandleMessage();
+
+			if (retVal != 0)
+			{
+				break;
+			}
+
+			// Draw Here
+
+			unsigned long long deltaTime = GetTime() - startTime;
+
+			deltaTime /= 10;
+
+			ClearBitmap(_context.framebuffer, clearColor);
+
+			ra_matrix4f_t translation = InitTranslation(0.f, 0.f, 3.f);
+			ra_matrix4f_t rotation = InitRotation(0.f, static_cast<float>(deltaTime), 0.f);
+
+			ra_matrix4f_t model = Multiply(translation, rotation);
+
+			//ra_matrix4f_t rotation = InitIdentity();
+
+			ra_matrix4f_t mp = Multiply(proj, model);
+
+			ra_vertex_t vert1;
+			ra_vertex_t vert2;
+			ra_vertex_t vert3;
+			vert1.position = Transform(top.position, mp);
+			vert2.position = Transform(mid.position, mp);
+			vert3.position = Transform(bot.position, mp);
+
+			FillTriangle(_context.framebuffer, vert1, vert2, vert3);
+
+			FlushWindowContext(&_context);
+
+		}
+
+		DestroyBitmap(_context.framebuffer);
+
+		CleanupRenderingContext(&_context);
+	}
+
+	ra_uint32_t GetMajorVersion()
+	{
+		return _context.majorVersion;
+	}
+
+	ra_uint32_t GetMinorVersion()
+	{
+		return _context.minorVersion;
+	}
+}
+
+//=============================================================================
+// End of file
+//=============================================================================

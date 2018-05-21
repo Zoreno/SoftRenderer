@@ -106,6 +106,22 @@ extern "C" {
 			vert2.position = Transform(mid.position, mp1);
 			vert3.position = Transform(bot.position, mp1);
 
+
+			// TODO: 
+			// Instead of calling DrawTriangle, we should put all the vertices into a buffer
+			// and call the DrawBuffer command, which will take in the vertices and apply something
+			// like a vertex shader to each of the objects. The resulting vertices should then be fed
+			// into a tesselation stage, where the vertices are converted to smaller primitives. 
+			// Optionally, a geometry shader could be used to add or remove vertices.
+			//
+			// The resulting vertices the go to the vertex post-processing stage, where transform
+			// feedback and clipping might take place. Perspective divide and depth clamping may
+			// also be performed.
+			//
+			// The vertices are then assemblied to primitives, here triangles, which are fed to the
+			// rasterizer, which generates fragments. The fragments are fed into a fragment-shader
+			// like stage, which can apply per-fragment operations to the fragments. The result
+			// is stored in a framebuffer which can then be used as a texture or swapped to screen.
 			DrawTriangle(_context.framebuffer, vert1, vert2, vert3);
 
 			vert1.position = Transform(top.position, mp2);

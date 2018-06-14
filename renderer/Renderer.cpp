@@ -45,23 +45,30 @@ extern "C" {
 
 		ra_vertex_t top =
 		{
-			{ -1.0f, -1.0f, 0.0f, 1.0f },
-			{ 1.0f, 0.0f, 0.0f, 1.0f },
-			{ 0.0f, 0.0f, 0.0f, 0.0f }
+			{ -1.0f, 1.0f, 0.0f, 1.0f }, // Position
+			{ 1.0f, 0.0f, 0.0f, 1.0f }, // Color (Not used at the moment)
+			{ 0.0f, 1.0f, 0.0f, 0.0f } // Texture coordinates
 		};
 
 		ra_vertex_t mid =
 		{
+			{ 1.0f, 1.0f, 0.0f, 1.0f },
 			{ 0.0f, 1.0f, 0.0f, 1.0f },
-			{ 0.0f, 1.0f, 0.0f, 1.0f },
-			{ 1.0f, 0.0f, 0.0f, 0.0f }
+			{ 1.0f, 1.0f, 0.0f, 0.0f }
 		};
 
 		ra_vertex_t bot =
 		{
-			{ 1.0f, -1.0f, 0.0f, 1.0f },
+			{ -1.0f, -1.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 1.0f, 1.0f },
-			{ 1.0f, 1.0f, 0.0f, 0.0f }
+			{ 0.0f, 0.0f, 0.0f, 0.0f }
+		};
+
+		ra_vertex_t extra =
+		{
+			{ 1.0f, -1.0f, 1.0f, 1.0f },
+			{ 0.0f, 0.0f, 1.0f, 1.0f },
+			{ 1.0f, 0.0f, 0.0f, 0.0f }
 		};
 
 		ra_matrix4f_t proj = InitPerspective(90.f, 800.f / 600.f, 0.1f, 1000.f);
@@ -88,24 +95,28 @@ extern "C" {
 
 			ClearBitmap(_context.framebuffer, (ra_uint8_t *)&clearColor);
 
-			ra_matrix4f_t translation1 = InitTranslation(0.f, 0.f, 4.0 + 14.f * sin(0.01f * deltaTime));
-			ra_matrix4f_t translation2 = InitTranslation(0.f, 1.f, 4.f);
+			ra_matrix4f_t translation1 = InitTranslation(0.f, 0.f, 3.0 + sin(0.01f * deltaTime));
 			ra_matrix4f_t rotation = InitRotation(0.f, static_cast<float>(deltaTime), 0.f);
 			//ra_matrix4f_t rotation = InitRotation(0.f, 0.0f, 0.f);
 
 			ra_matrix4f_t model1 = Multiply(translation1, rotation);
-			ra_matrix4f_t model2 = Multiply(translation2, rotation);
 
 			ra_matrix4f_t mp1 = Multiply(proj, model1);
-			ra_matrix4f_t mp2 = Multiply(proj, model2);
 
 			ra_vertex_t vert1 = top;
 			ra_vertex_t vert2 = mid;
 			ra_vertex_t vert3 = bot;
+			ra_vertex_t vert4 = extra;
 			vert1.position = Transform(top.position, mp1);
 			vert2.position = Transform(mid.position, mp1);
 			vert3.position = Transform(bot.position, mp1);
+			vert4.position = Transform(extra.position, mp1);
 
+			std::vector<ra_vertex_t> vertices;
+			vertices.push_back(vert1);
+			vertices.push_back(vert2);
+			vertices.push_back(vert3);
+			vertices.push_back(vert4);
 
 			// TODO: 
 			// Instead of calling DrawTriangle, we should put all the vertices into a buffer
@@ -122,13 +133,7 @@ extern "C" {
 			// rasterizer, which generates fragments. The fragments are fed into a fragment-shader
 			// like stage, which can apply per-fragment operations to the fragments. The result
 			// is stored in a framebuffer which can then be used as a texture or swapped to screen.
-			DrawTriangle(_context.framebuffer, vert1, vert2, vert3);
-
-			vert1.position = Transform(top.position, mp2);
-			vert2.position = Transform(mid.position, mp2);
-			vert3.position = Transform(bot.position, mp2);
-
-			DrawTriangle(_context.framebuffer, vert1, vert2, vert3);
+			DrawTriangleStrip(_context.framebuffer, &vertices[0], vertices.size());
 
 			FlushWindowContext(&_context);
 

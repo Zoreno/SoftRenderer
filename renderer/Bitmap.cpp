@@ -588,3 +588,30 @@ void DrawTriangle(ra_bitmap_t *bitmap, ra_vertex_t v1, ra_vertex_t v2, ra_vertex
 		}
 	}
 }
+
+void DrawTriangleStrip(ra_bitmap_t *bitmap, ra_vertex_t *vertices, ra_uint32_t count)
+{
+	for(int i = 0; i < count - 2; ++i)
+	{
+		// This is due to the fact that the input ABCDE generates triangles
+		// ABC, BCD, CDE. The problem is that BCD is in the opposite orientation.
+		// The correct orientation is BDC, which we can get by swapping vertex 
+		// 1 and 2. This is true for all odd numbered triangles.
+		if ((i % 2) == 0)
+		{
+			DrawTriangle(bitmap, vertices[i], vertices[i + 1], vertices[i + 2]);
+		}
+		else
+		{
+			DrawTriangle(bitmap, vertices[i + 1], vertices[i], vertices[i + 2]);
+		}
+	}
+}
+
+void DrawTriangles(ra_bitmap_t *bitmap, ra_vertex_t *vertices, ra_uint32_t count)
+{
+	for(int i = 0; i < count; i += 3)
+	{
+		DrawTriangle(bitmap, vertices[i], vertices[i + 1], vertices[i + 2]);
+	}
+}

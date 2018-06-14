@@ -2,6 +2,7 @@
 
 #include "RA_common.h"
 #include "Vertex.h"
+#include <vector>
 
 // TODO: Separate framebuffers and textures.
 
@@ -25,9 +26,14 @@ ra_bitmap_t *CreateBitmap(ra_int32_t width, ra_int32_t height, ra_int32_t bpp);
 
 ra_bitmap_t *CreateBitmapFromTGAImage(const char *filePath);
 
-void DestroyBitmap(ra_bitmap_t *bitmap);
+void DestroyBitmap(
+	ra_bitmap_t *bitmap);
 
-void ClearBitmap(ra_bitmap_t *bitmap, ra_uint8_t *color, bool clearColor = true, bool clearDepth = true);
+void ClearBitmap(
+	ra_bitmap_t *bitmap,
+	ra_uint8_t *color,
+	bool clearColor = true,
+	bool clearDepth = true);
 
 void DrawPixel(
 	ra_bitmap_t *bitmap,
@@ -47,4 +53,13 @@ void CopyPixel(
 	ra_int32_t srcX,
 	ra_int32_t srcY);
 
-void DrawTriangle(ra_bitmap_t *bitmap, ra_vertex_t v1, ra_vertex_t v2, ra_vertex_t v3);
+void DrawTriangle(
+	ra_bitmap_t *bitmap,
+	ra_vertex_t v1,
+	ra_vertex_t v2,
+	ra_vertex_t v3);
+
+void DrawTriangleStrip(
+	ra_bitmap_t *bitmap,
+	ra_vertex_t *vertices,
+	ra_uint32_t count);

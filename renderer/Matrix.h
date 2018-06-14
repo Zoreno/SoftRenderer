@@ -51,3 +51,7 @@ ra_matrix4f_t InitRotation(const ra_vector4f_t& forward, const ra_vector4f_t& up
 ra_matrix4f_t InitRotation(const ra_vector4f_t& forward, const ra_vector4f_t& up);
 
 ra_vector4f_t Transform(const ra_vector4f_t& vector, const ra_matrix4f_t& matrix);
+
+ra_matrix4f_t Transpose(const ra_matrix4f_t& matrix);
+
+ra_matrix4f_t Inverse(const ra_matrix4f_t& matrix);

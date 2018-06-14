@@ -82,7 +82,6 @@ Color borderColor;
 COMPAREMODE compareMode;
 COMPAREFUNC compareFunc;
 
-
 ...
 
 } ra_texture_sampler_t;
